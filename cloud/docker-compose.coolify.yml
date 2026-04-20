@@ -1,0 +1,54 @@
+# Edrin Travel — Coolify deploy of OpenClaw gateway.
+#
+# Differences vs upstream's docker-compose.yml:
+#   * Only runs the gateway (no openclaw-cli sidecar — that's a local-dev tool).
+#   * No host-port publishing; Traefik (Coolify) terminates TLS on port 443
+#     and forwards to gateway:18789 via docker-compose_domains.
+#   * Persistent named volumes for config + workspace instead of bind mounts,
+#     so Coolify manages backups.
+#   * Assumes image `openclaw-edrin:latest` is built from the repo root
+#     Dockerfile (Coolify handles the build in its deploy pipeline).
+
+name: edrin-claw
+
+services:
+  gateway:
+    image: openclaw-edrin:latest
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
+      OPENCLAW_ALLOW_INSECURE_PRIVATE_WS: ${OPENCLAW_ALLOW_INSECURE_PRIVATE_WS:-}
+      CLAUDE_AI_SESSION_KEY: ${CLAUDE_AI_SESSION_KEY:-}
+      CLAUDE_WEB_SESSION_KEY: ${CLAUDE_WEB_SESSION_KEY:-}
+      CLAUDE_WEB_COOKIE: ${CLAUDE_WEB_COOKIE:-}
+      TZ: ${OPENCLAW_TZ:-America/Santo_Domingo}
+    volumes:
+      - config:/home/node/.openclaw
+      - workspace:/home/node/.openclaw/workspace
+    expose:
+      - "18789"
+    init: true
+    restart: unless-stopped
+    # Bind to 0.0.0.0 so the gateway accepts connections forwarded by Traefik.
+    command:
+      - node
+      - openclaw.mjs
+      - gateway
+      - --bind
+      - "0.0.0.0"
+      - --port
+      - "18789"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:18789/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  config:
+  workspace:

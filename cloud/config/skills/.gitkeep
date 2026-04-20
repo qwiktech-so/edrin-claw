@@ -1,0 +1,3 @@
+# Custom OpenClaw skills live here, one subdirectory per skill.
+# These are tracked in git and baked into the image at build time so the
+# cloud gateway boots with them already registered.

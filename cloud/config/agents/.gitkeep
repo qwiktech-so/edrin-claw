@@ -1,0 +1,4 @@
+# Agents live here (each in its own subdirectory).
+# Create agents with `openclaw agents create <id>` locally, then commit the
+# resulting directory here. The Coolify build COPYs them into
+# /home/node/.openclaw/agents/ inside the image.
